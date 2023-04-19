@@ -1,0 +1,24 @@
+{
+    "destination": "U780e55fa472a90b268a72a3caf1d0ff8",
+    "events": [
+        {
+            "type": "message",
+            "message": {
+                "type": "text",
+                "id": "18003695768707",
+                "text": "げんきですか？"
+            },
+            "webhookEventId": "01GYBTCJ801WHR244792J3NJPT",
+            "deliveryContext": {
+                "isRedelivery": false
+            },
+            "timestamp": 1681876469749,
+            "source": {
+                "type": "user",
+                "userId": "U1f1977ee17e630fc0ba1f67b9f0f162f"
+            },
+            "replyToken": "820bef94a7a94900b93136bb084a143d",
+            "mode": "active"
+        }
+    ]
+}
