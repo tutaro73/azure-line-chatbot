@@ -25,5 +25,24 @@
 
 ### Azure
 
+## 環境変数
+
+|環境変数名|説明|例|
+|--|--|--|
+OPENAI_API_ENDPOINT|Azure OpenAI Serviceのエンドポイント|https://\<YourResourceName\>.openai.azure.com/
+OPENAI_ENGINE|Azure OpenAI Serviceのモデルデプロイ名(gpt-35-turbo)|line-gpt35
+TABLE_ENDPOINT|Azure Table Storageのエンドポイント|https://\<YourResourceName\>.table.core.windows.net
+TABLE_NAME|Chat Logを保存するTable名|chatlog
+KEY_VAULT_ENDPOINT|Key Vaultのエンドポイント|https://\<YoutResourceName\>.vault.azure.net/
+
+## Key Vault Secret
+
+|シークレット名|説明|例|
+|--|--|--|
+LINESECRET|LINEチャンネルシークレット|xxxx...(32 Bytes)
+LINETOKEN|LINEチャンネルアクセストークン|xxxx...xxx=
+
+
+
 ## 利用方法
 

@@ -6,4 +6,5 @@ azure-functions
 line-bot-sdk
 azure-data-tables
 azure.identity
+azure.keyvault.secrets
 openai
