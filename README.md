@@ -42,7 +42,5 @@ KEY_VAULT_ENDPOINT|Key Vaultのエンドポイント|https://\<YoutResourceName\
 LINESECRET|LINEチャンネルシークレット|xxxx...(32 Bytes)
 LINETOKEN|LINEチャンネルアクセストークン|xxxx...xxx=
 
-
-
 ## 利用方法
 

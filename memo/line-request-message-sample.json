@@ -21,8 +21,7 @@
             "mode": "active"
         }
     ]
-}
-,
+},
 {
     "destination": "U8592341a5724838e651e0cde1233724f",
     "events": [
@@ -53,4 +52,31 @@
             "mode": "active"
         }
     ]
-}F
+}
+
+{
+    "destination": "U8592341a5724838e651e0cde1233724f",
+    "events": [
+        {
+            "type": "message",
+            "message": {
+                "type": "sticker",
+                "id": "18014733248121",
+                "stickerId": "515857525",
+                "packageId": "20128400",
+                "stickerResourceType": "ANIMATION"
+            },
+            "webhookEventId": "01GYGRYZD429F9KJ0BQYKTJED5",
+            "deliveryContext": {
+                "isRedelivery": false
+            },
+            "timestamp": 1682042747817,
+            "source": {
+                "type": "user",
+                "userId": "U1f1977ee17e630fc0ba1f67b9f0f162f"
+            },
+            "replyToken": "110e4c5dbb734f828cede8acf4cfcccb",
+            "mode": "active"
+        }
+    ]
+}
