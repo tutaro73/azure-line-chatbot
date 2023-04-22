@@ -1,87 +1,87 @@
 # azure-line-chatbot
 
-## はじめに
+## Introduction
 
-これは、Azure OpenAI serviceをベースとして、ChatGPTと会話するプログラムです。
+This is a program to chat with ChatGPT based on Azure OpenAI service.
 
-## 必要なもの
+## Requirements
 
 - Azure Subscription
-  - 加えてOpenAI Serviceのプレビュー申請でChatGPT 3.5の利用が可能になっていること
-- LINE Developerアカウント
+  - In addition, the use of ChatGPT 3.5 should be possible with the preview application of OpenAI Service.
+- LINE Developer Account
 
-## 構成説明
+## Configuration details
 
-- LINEでフレンド追加されたChatBotがWeb HookにてAzure Functionsを呼び出します
-- 本プログラムが実行され以下の処理を行います
-  - LINEユーザ識別子を元に過去の会話履歴をAzure Table Storageから取得します
-  - 過去の会話履歴(直近10分かつ5件以内)を含め、ChatGPTに送信します
-  - ChatGPTから受けた返信メッセージをLINEに返却します
-  - 最新のチャットメッセージ(ユーザ、アシスタント)をAzure Table Storageに追加します
+- The ChatBot added in LINE calls Azure Functions via Webhook.
+- This program executes the following processes:
+  - Retrieve past conversation history from Azure Table Storage based on LINE user identifier.
+  - Send past conversation history (up to 5 items within the last 10 minutes) to ChatGPT.
+  - Returns the reply message received from ChatGPT to LINE.
+  - Add the latest chat message (user and assistant) to Azure Table Storage.
 
 ![img](/images/infrastructure.png)
 
-## 利用方法
+## Usage
 
-### ツールの事前準備
+### Preparing Tools
 
-クライアントPCに以下のツールをインストールしておきます
+Install the following tools on your client PC:
 
 - Azure CLI  
   https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli
 - Azure Functions Core Tools  
   https://learn.microsoft.com/ja-jp/azure/azure-functions/functions-run-local
 
-### LINE DevelopersにてMessaging APIの準備
+### Preparing Messaging API in LINE Developers
 
-以下を控えておく
+Note the following:
 
-- チャネルシークレット
-- チャネルアクセストークン（長期）
+- Channel secret
+- Channel access token (long-term)
 
-### GitHubリポジトリのclone
+### Clone GitHub Repository
 
 ```sh
 git clone https://github.com/katakura/azure-line-chatbot.git
 ```
 
-### Azureリソースのデプロイ
+### Deploy Azure Resources
 
 ```sh
-# 環境変数の設定
+# Set environment variables
 rg_name="rg-chatbot"
 location="japaneast"
 openai_location="eastus"
 line_token="???"
 line_secret="???"
 
-# Azure Subscriptionへログイン
+# Login to Azure Subscription
 az login
 
-# リソースグループの作成
+# Create resource group
 az group create -g $rg_name -l $location
 
-# リソースデプロイ
+# Deploy resources
 az deployment group create -g $rg_name --template-file templates/deploy.bicep --parameters location=$location openAiLocation=$openai_location lineToken=$line_token lineSecret=$line_secret
 ```
 
-### Functionsアプリのデプロイ
+### Deploy Functions Application
 
 ```sh
-# 作成されたFunctiosnのリソース名取得
+# Get the name of the created Function's resource
 func_name=$(az functionapp list -g $rg_name --query "[0].name" -o tsv)
 
-# アプリデプロイ
+# Deploy the app
 func azure functionapp publish $func_name
 ```
 
-### LINE messaging APIのWeb Hook登録
+### Register Web Hook for LINE messaging API
 
 ```sh
 func azure functionapp list-functions $func_name --show-keys
 ```
 
-```text:実行例
+```text:Execution example
 $ func azure functionapp list-functions $func_name --show-keys
 
 Functions in func-chatbot-xxxxxxxxxxxxx:
@@ -89,23 +89,23 @@ Functions in func-chatbot-xxxxxxxxxxxxx:
         Invoke url: https://func-chatbot-xxxxxxxxxxxxx.azurewebsites.net/api/line-chat?code=xxx...xxx==
 ```
 
-Invoke urlに表示されている内容をLINE DevelopersのWebhook URLに設定する
+Set the contents displayed in the Invoke URL to the Webhook URL of LINE Developers
 
-## 環境変数
+## Environment variables
 
-|環境変数名|説明|例 or デフォルト値|
+|Environment variable name|Description|Example or default value|
 |--|--|--|
-OPENAI_API_ENDPOINT|Azure OpenAI Serviceのエンドポイント|https://\<YourResourceName\>.openai.azure.com/
-OPENAI_ENGINE|Azure OpenAI Serviceのモデルデプロイ名(gpt-35-turbo)|line-gpt35
-TABLE_ENDPOINT|Azure Table Storageのエンドポイント|https://\<YourResourceName\>.table.core.windows.net
-TABLE_NAME|Chat Logを保存するTable名|chatlog
-KEY_VAULT_ENDPOINT|Key Vaultのエンドポイント|https://\<YoutResourceName\>.vault.azure.net/
+OPENAI_API_ENDPOINT|Azure OpenAI Service endpoint|https://\<YourResourceName\>.openai.azure.com/
+OPENAI_ENGINE|Model deployment name of Azure OpenAI Service (gpt-35-turbo)|line-gpt35
+TABLE_ENDPOINT|Azure Table Storage endpoint|https://\<YourResourceName\>.table.core.windows.net
+TABLE_NAME|Table name to save chat logs|chatlog
+KEY_VAULT_ENDPOINT|Key Vault endpoint|https://\<YoutResourceName\>.vault.azure.net/
 OPENAI_API_SYSTEM_PROMPT|ChatGPTのSystem Prompt|あなたの名前は「みぃちゃん」です。必ず日本語で返答してください。返答は猫っぽくお願いします。絵文字も付けて。結果は1つだけで短めでお願いします。
 UNKNOWN_STICKER_MESSAGE|スタンプを受けて返信に困ったときのメッセージ|そのスタンプはよくわからないにゃ。ごめんにゃ。
 
 ## Key Vault Secret
 
-|シークレット名|説明|例|
+|Secret name|Description|Example|
 |--|--|--|
-LINESECRET|LINEチャンネルシークレット|xxxx...(32 Bytes)
-LINETOKEN|LINEチャンネルアクセストークン|xxxx...xxx=
+LINESECRET|LINE Channel Secret|xxxx...(32 Bytes)
+LINETOKEN|LINE Channel Access Token|xxxx...xxx=
