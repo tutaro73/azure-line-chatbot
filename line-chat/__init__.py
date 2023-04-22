@@ -1,14 +1,17 @@
 import logging
 import os
-from datetime import datetime, timezone, timedelta
-import openai
+from datetime import datetime, timedelta
+
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, StickerMessage, TextSendMessage
+from linebot import LineBotApi, WebhookHandler
+
 from azure.identity import DefaultAzureCredential
 from azure.data.tables import TableServiceClient
 import azure.functions as func
 from azure.keyvault.secrets import SecretClient
-from linebot import LineBotApi, WebhookHandler
+
+import openai
 
 # Azure Credential
 azure_credential = DefaultAzureCredential()
@@ -21,12 +24,12 @@ openai.api_version = "2023-03-15-preview"
 
 openai.api_base = os.getenv('OPENAI_API_ENDPOINT')
 openai.api_key = azure_token.token
-openai_engine = os.getenv('OPENAI_ENGINE', 'test-gpt35')
+openai_engine = os.getenv('OPENAI_ENGINE')
 
 system_prompt = os.getenv('OPENAI_API_SYSTEM_PROMPT',
-                          'あなたの名前は「みぃちゃん」です。必ず日本語で返答してください。返答は猫っぽくお願いします。絵文字も付けて。結果は1つだけで短めでお願いします。')
+                          u'あなたの名前は「みぃちゃん」です。必ず日本語で返答してください。返答は猫っぽくお願いします。絵文字も付けて。結果は1つだけで短めでお願いします。')
 unknown_sticker_message = os.getenv(
-    'UNKNOWN_STICKER_MESSAGE', 'そのスタンプはよくわからないにゃ。ごめんにゃ。')
+    'UNKNOWN_STICKER_MESSAGE', u'そのスタンプはよくわからないにゃ。ごめんにゃ。')
 
 # Azure table storage
 table_endpoint = os.getenv('TABLE_ENDPOINT')
@@ -50,8 +53,9 @@ handler = WebhookHandler(channel_secret)
 
 
 def put_table(user_id, unique_id, user_message, assistant_message):
-    # task = {'PartitionKey': user_id, 'RowKey': format(datetime.now(timezone.utc).isoformat(
-    # )), 'UserMessage': user_message, 'AssistantMessage': assistant_message}
+    """
+    Add conversation content to Table Storage
+    """
     task = {'PartitionKey': user_id, 'RowKey': unique_id,
             'UserMessage': user_message, 'AssistantMessage': assistant_message}
     # Insert an entity into the table
@@ -59,6 +63,9 @@ def put_table(user_id, unique_id, user_message, assistant_message):
 
 
 def get_table(user_id):
+    """
+    Retrieve past conversation history from Table Storage
+    """
     logging.info("start:get_table()")
     current_time = datetime.utcnow()
     past_time = current_time - timedelta(minutes=10)
@@ -97,6 +104,9 @@ def get_table(user_id):
 
 
 def chat_with_gpt3(messages):
+    """
+    Calling process of OpenAI API
+    """
     try:
         response = openai.ChatCompletion.create(
             engine=openai_engine,
@@ -119,6 +129,9 @@ def chat_with_gpt3(messages):
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
+    """
+    Main processing for a webhook
+    """
     logging.info('Python HTTP trigger function processed a request.')
 
     signature = req.headers['x-line-signature']
@@ -140,6 +153,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
 
 def reply_message(message_text, user_id, message_id, reply_token):
+    """
+    Create a response to the received message and send it back to LINE.
+    """
     msg = [
         {
             "role": "system",
@@ -173,35 +189,36 @@ def reply_message(message_text, user_id, message_id, reply_token):
         TextSendMessage(text=reply_message)
     )
 
-"""
-Sticker(スタンプ)受信時のハンドラ
-"""
 
 @handler.add(MessageEvent, message=StickerMessage)
 def message_sticker(event):
+    """
+    Handler for receiving Sticker (Stamp)
+    """
     profile = line_bot_api.get_profile(event.source.user_id)
     user_id = profile.user_id
     message_id = event.message.id
     reply_token = event.reply_token
 
     try:
-        # Stickerメッセージ内のキーワードの1番目をメッセージとする
+        # Set the first keyword in the ticker message as the message
         message_text = event.message.keywords[0]
         reply_message(message_text=message_text, user_id=user_id,
                       message_id=message_id, reply_token=reply_token)
     except Exception as e:
         logging.error(f'Sticker: Unhandled exception: {e}')
-        # Stickerメッセージ内にキーワードが存在しない
+        # There are no keywords in the sticker message
         line_bot_api.reply_message(
             reply_token,
             TextSendMessage(text=unknown_sticker_message)
         )
 
-# テキストメッセージ受信時のハンドラ
-
 
 @handler.add(MessageEvent, message=TextMessage)
 def message_text(event):
+    """
+    Handler for receiving text message
+    """
     profile = line_bot_api.get_profile(event.source.user_id)
     user_id = profile.user_id
     message_id = event.message.id
