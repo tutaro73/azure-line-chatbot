@@ -29,8 +29,8 @@ unknown_sticker_message = os.getenv(
     'UNKNOWN_STICKER_MESSAGE', 'そのスタンプはよくわからないにゃ。ごめんにゃ。')
 
 # Azure table storage
-table_endpoint = os.getenv('TABLE_ENDPOINT', None)
-table_name = os.getenv('TABLE_NAME', None)
+table_endpoint = os.getenv('TABLE_ENDPOINT')
+table_name = os.getenv('TABLE_NAME', 'chatlog')
 
 table_service = TableServiceClient(
     endpoint=table_endpoint, credential=azure_credential)
@@ -173,11 +173,9 @@ def reply_message(message_text, user_id, message_id, reply_token):
         TextSendMessage(text=reply_message)
     )
 
-
 """
 Sticker(スタンプ)受信時のハンドラ
 """
-
 
 @handler.add(MessageEvent, message=StickerMessage)
 def message_sticker(event):
