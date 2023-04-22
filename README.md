@@ -28,9 +28,9 @@ This is a program to chat with ChatGPT based on Azure OpenAI service.
 Install the following tools on your client PC:
 
 - Azure CLI  
-  https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli
+  https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
 - Azure Functions Core Tools  
-  https://learn.microsoft.com/ja-jp/azure/azure-functions/functions-run-local
+  https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local
 
 ### Preparing Messaging API in LINE Developers
 
