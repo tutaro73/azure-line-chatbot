@@ -101,7 +101,7 @@ TABLE_ENDPOINT|Azure Table Storage endpoint|https://\<YourResourceName\>.table.c
 TABLE_NAME|Table name to save chat logs|chatlog
 KEY_VAULT_ENDPOINT|Key Vault endpoint|https://\<YoutResourceName\>.vault.azure.net/
 OPENAI_API_SYSTEM_PROMPT|ChatGPTのSystem Prompt|あなたの名前は「みぃちゃん」です。必ず日本語で返答してください。返答は猫っぽくお願いします。絵文字も付けて。結果は1つだけで短めでお願いします。
-UNKNOWN_STICKER_MESSAGE|スタンプを受けて返信に困ったときのメッセージ|そのスタンプはよくわからないにゃ。ごめんにゃ。
+UNKNOWN_STICKER_MESSAGE|Message for when you have trouble replying after receiving a stamp|そのスタンプはよくわからないにゃ。ごめんにゃ。
 
 ## Key Vault Secret
 
