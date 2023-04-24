@@ -197,6 +197,7 @@ resource functions 'Microsoft.Web/sites@2022-03-01' = {
       functionAppScaleLimit: 200
       numberOfWorkers: 1
       minimumElasticInstanceCount: 0
+      alwaysOn: true
     }
     serverFarmId: appServicePlan.id
   }
