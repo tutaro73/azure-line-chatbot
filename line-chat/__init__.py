@@ -82,9 +82,14 @@ def get_table(user_id):
         "UserMessage",
         "AssistantMessage"
     ]
-    entities = table_client.query_entities(
-        select=select_col, query_filter=filter_condition)
     return_obj = []
+    try:
+        entities = table_client.query_entities(
+            select=select_col, query_filter=filter_condition)
+    except Exception as e:
+        logging.error(f'Unhandled exception: {e}')
+        return return_obj
+
     for wk in entities:
         return_obj.append(
             {
