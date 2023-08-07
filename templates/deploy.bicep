@@ -24,8 +24,14 @@ param tableName string = 'chatlog'
 // Please select the region where your OpenAI Service preview request has been approved.
 @description('OpenAI service deploy region')
 @allowed([
+  'australiaeast'
+  'canadaeast'
   'eastus'
-  'southcentralus'
+  'eastus2'
+  'francecentral'
+  'japaneast'
+  'northcentralus'
+  'uksouth'
   'westeurope'
 ])
 param openAiLocation string = 'eastus'
@@ -45,7 +51,7 @@ var openAiDeploymentsName = 'gpt35'
 var openAiModel = {
   format: 'OpenAI'
   name: 'gpt-35-turbo'
-  version: '0301'
+  version: '0613'
 }
 
 var funcAppSettings = [
@@ -101,7 +107,7 @@ var funcAppSettings = [
   }
 ]
 
-resource openAi 'Microsoft.CognitiveServices/accounts@2022-12-01' = {
+resource openAi 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: openAiName
   location: openAiLocation
   sku: {
@@ -114,14 +120,15 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2022-12-01' = {
   }
 }
 
-resource openAiDeployments 'Microsoft.CognitiveServices/accounts/deployments@2022-12-01' = {
+resource openAiDeployments 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
   name: openAiDeploymentsName
   parent: openAi
+  sku: {
+    name: 'Standard'
+    capacity: 120
+  }
   properties: {
     model: openAiModel
-    scaleSettings: {
-      scaleType: 'Standard'
-    }
   }
 }
 
@@ -193,7 +200,7 @@ resource functions 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     siteConfig: {
       appSettings: funcAppSettings
-      linuxFxVersion: 'PYTHON|3.10'
+      linuxFxVersion: 'PYTHON|3.11'
       functionAppScaleLimit: 200
       numberOfWorkers: 1
       minimumElasticInstanceCount: 0

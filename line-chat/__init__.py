@@ -13,17 +13,29 @@ from azure.keyvault.secrets import SecretClient
 
 import openai
 
-# Azure Credential
+class TokenManager:
+    def __init__(self):
+        self.credential = DefaultAzureCredential()
+        self.token = None
+        self.expiry = datetime.now()
+
+    def get_token(self, url='https://management.azure.com/.default'):
+        if not self.token or self.expiry <= datetime.now() + timedelta(minutes=5):
+            token_response = self.credential.get_token(url)
+            self.token = token_response.token
+            self.expiry = datetime.utcfromtimestamp(token_response.expires_on)
+        return self.token
+
+token_manager = TokenManager()
+token_manager.__init__()
 azure_credential = DefaultAzureCredential()
-azure_token = azure_credential.get_token(
-    "https://cognitiveservices.azure.com/.default")
 
 # OpenAI
 openai.api_type = 'azure_ad'
 openai.api_version = "2023-03-15-preview"
 
 openai.api_base = os.getenv('OPENAI_API_ENDPOINT')
-openai.api_key = azure_token.token
+openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
 openai_engine = os.getenv('OPENAI_ENGINE')
 
 system_prompt = os.getenv('OPENAI_API_SYSTEM_PROMPT',
@@ -112,6 +124,9 @@ def chat_with_gpt3(messages):
     """
     Calling process of OpenAI API
     """
+    print("start:get_token()\n")
+    openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
+    print("end:get_token()\n")
     try:
         response = openai.ChatCompletion.create(
             engine=openai_engine,

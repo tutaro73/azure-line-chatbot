@@ -72,7 +72,7 @@ az deployment group create -g $rg_name --template-file templates/deploy.bicep --
 func_name=$(az functionapp list -g $rg_name --query "[0].name" -o tsv)
 
 # Deploy the app
-func azure functionapp publish $func_name
+func azure functionapp publish $func_name --python
 ```
 
 ### Register Web Hook for LINE messaging API
