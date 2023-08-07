@@ -17,10 +17,10 @@ class TokenManager:
     def __init__(self):
         self.credential = DefaultAzureCredential()
         self.token = None
-        self.expiry = datetime.now()
+        self.expiry = datetime.utcnow()
 
     def get_token(self, url='https://management.azure.com/.default'):
-        if not self.token or self.expiry <= datetime.now() + timedelta(minutes=5):
+        if not self.token or self.expiry <= datetime.utcnow() + timedelta(minutes=5):
             token_response = self.credential.get_token(url)
             self.token = token_response.token
             self.expiry = datetime.utcfromtimestamp(token_response.expires_on)
