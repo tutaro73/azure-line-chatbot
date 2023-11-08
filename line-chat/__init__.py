@@ -31,17 +31,14 @@ token_manager.__init__()
 azure_credential = DefaultAzureCredential()
 
 # OpenAI
-openai.api_type = 'azure_ad'
-openai.api_version = "2023-03-15-preview"
-
-openai.api_base = os.getenv('OPENAI_API_ENDPOINT')
 openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
-openai_engine = os.getenv('OPENAI_ENGINE')
+openai_model = "gpt-4-1106-preview"
+openai_vision_model = "gpt-4-vision-preview"
 
 system_prompt = os.getenv('OPENAI_API_SYSTEM_PROMPT',
-                          u'あなたの名前は「みぃちゃん」です。必ず日本語で返答してください。返答は猫っぽくお願いします。絵文字も付けて。結果は1つだけで短めでお願いします。')
+                          u'あなたの名前は「らいざっぴ」です。食事のカロリー計算をしてダイエットの手助けをします。必ず日本語で返答してください。親しみやすい口調で話し、語尾に「ッピ」をつけてください。')
 unknown_sticker_message = os.getenv(
-    'UNKNOWN_STICKER_MESSAGE', u'そのスタンプはよくわからないにゃ。ごめんにゃ。')
+    'UNKNOWN_STICKER_MESSAGE', u'そのスタンプはよくわからないッピ。ごめんッピ。')
 
 # Azure table storage
 table_endpoint = os.getenv('TABLE_ENDPOINT')
@@ -120,7 +117,7 @@ def get_table(user_id):
     return return_obj[-10:]
 
 
-def chat_with_gpt3(messages):
+def chat_with_gpt4(messages):
     """
     Calling process of OpenAI API
     """
@@ -129,7 +126,34 @@ def chat_with_gpt3(messages):
     print("end:get_token()\n")
     try:
         response = openai.ChatCompletion.create(
-            engine=openai_engine,
+            model=openai_model,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=800,
+            top_p=0.95,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop=None)
+        return response.choices[0]["message"]["content"].strip()
+
+    except (openai.error.AuthenticationError, openai.error.InvalidRequestError) as e:
+        logging.error(f"OpenAI API error: {e}")
+        return None
+
+    except IndexError:
+        logging.error("No response returned from GPT-3.")
+        return None
+
+def chat_with_gpt4_vision(messages):
+    """
+    Calling process of OpenAI vision API
+    """
+    print("start:get_token()\n")
+    openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
+    print("end:get_token()\n")
+    try:
+        response = openai.ChatCompletion.create(
+            model=openai_vision_model,
             messages=messages,
             temperature=0.7,
             max_tokens=800,
@@ -196,12 +220,12 @@ def reply_message(message_text, user_id, message_id, reply_token):
     )
 
     try:
-        res_message = chat_with_gpt3(msg)
+        res_message = chat_with_gpt4(msg)
         reply_message = f'{res_message}'
         put_table(user_id, message_id, message_text, reply_message)
 
     except Exception as e:
-        logging.error(f"Error while calling chat_with_gpt3: {e}")
+        logging.error(f"Error while calling chat_with_gpt4: {e}")
         reply_message = "Sorry, I couldn't process your message."
 
     line_bot_api.reply_message(
@@ -247,3 +271,38 @@ def message_text(event):
 
     reply_message(message_text=message_text, user_id=user_id,
                   message_id=message_id, reply_token=reply_token)
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    profile = line_bot_api.get_profile(event.source.user_id)
+    user_id = profile.user_id
+    message_id = event.message.id
+    message_text = event.message.text
+    reply_token = event.reply_token
+
+    # message_idから画像のバイナリデータを取得
+    image_data = line_bot_api.get_message_content(message_id)
+
+    # 画像データをBase64エンコードする
+    encoded_image = base64.b64encode(image_data).decode("utf-8")
+
+    # OpenAIのAPIを使って画像の説明をリクエストする
+    response = openai.ChatCompletion.create(
+        model="gpt-4-vision-preview",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "この画像を説明してください。"},
+                    {
+                        "type": "image",
+                        "data": encoded_image  # 画像データをBase64エンコードしたものを使用
+                    },
+                ],
+            }
+        ],
+        max_tokens=300
+    )
+
+    return response  # OpenAIからのレスポンスを返す
+

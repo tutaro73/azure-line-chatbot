@@ -21,38 +21,15 @@ param baseName string = 'chatbot'
 @description('chat log store table name for table storage')
 param tableName string = 'chatlog'
 
-// Please select the region where your OpenAI Service preview request has been approved.
-@description('OpenAI service deploy region')
-@allowed([
-  'australiaeast'
-  'canadaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'northcentralus'
-  'uksouth'
-  'westeurope'
-])
-param openAiLocation string = 'eastus'
-
 //
 // variables
 //
-var openAiName = 'openai-${baseName}-${uniqueString(resourceGroup().id)}'
 var omsName = 'log-${baseName}'
 var appinsName = 'appins-${baseName}'
 var planName = 'plan-${baseName}'
 var funcName = 'func-${baseName}-${uniqueString(resourceGroup().id)}'
 var funcStName = 'st${take(baseName, 9)}${uniqueString(resourceGroup().id)}'
 var kvName = 'kv-${baseName}-${uniqueString(resourceGroup().id)}'
-
-var openAiDeploymentsName = 'gpt35'
-var openAiModel = {
-  format: 'OpenAI'
-  name: 'gpt-35-turbo'
-  version: '0613'
-}
 
 var funcAppSettings = [
   // Azure Functions basic settings
@@ -86,14 +63,6 @@ var funcAppSettings = [
   }
   // ChatBot function settings
   {
-    name: 'OPENAI_API_ENDPOINT'
-    value: openAi.properties.endpoint
-  }
-  {
-    name: 'OPENAI_ENGINE'
-    value: openAiDeploymentsName
-  }
-  {
     name: 'TABLE_ENDPOINT'
     value: funcStorage.properties.primaryEndpoints.table
   }
@@ -107,31 +76,7 @@ var funcAppSettings = [
   }
 ]
 
-resource openAi 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
-  name: openAiName
-  location: openAiLocation
-  sku: {
-    name: 'S0'
-  }
-  kind: 'OpenAI'
-  properties: {
-    publicNetworkAccess: 'Enabled'
-    customSubDomainName: openAiName
-  }
-}
-
-resource openAiDeployments 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
-  name: openAiDeploymentsName
-  parent: openAi
-  sku: {
-    name: 'Standard'
-    capacity: 120
-  }
-  properties: {
-    model: openAiModel
-  }
-}
-
+// resources
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: omsName
   location: location
@@ -272,21 +217,6 @@ resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   name: guid(subscription().id, funcStorage.id, storageTableDataContributorRoleDefinition.id)
   properties: {
     roleDefinitionId: storageTableDataContributorRoleDefinition.id
-    principalId: functions.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource cognitiveServicesOpenAiUserRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-}
-
-resource cognitiveServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: openAi
-  name: guid(subscription().id, openAi.id, cognitiveServicesOpenAiUserRoleDefinition.id)
-  properties: {
-    roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinition.id
     principalId: functions.identity.principalId
     principalType: 'ServicePrincipal'
   }
