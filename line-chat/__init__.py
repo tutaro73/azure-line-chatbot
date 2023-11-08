@@ -32,7 +32,7 @@ token_manager.__init__()
 azure_credential = DefaultAzureCredential()
 
 # OpenAI
-openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
+openai.api_key = os.getenv('API_KEY')
 openai_model = "gpt-4-1106-preview"
 openai_vision_model = "gpt-4-vision-preview"
 
@@ -123,7 +123,7 @@ def chat_with_gpt4(messages):
     Calling process of OpenAI API
     """
     print("start:get_token()\n")
-    openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
+    openai.api_key = os.getenv('API_KEY')
     print("end:get_token()\n")
     try:
         response = openai.ChatCompletion.create(
@@ -150,7 +150,7 @@ def chat_with_gpt4_vision(messages):
     Calling process of OpenAI vision API
     """
     print("start:get_token()\n")
-    openai.api_key = token_manager.get_token(url="https://cognitiveservices.azure.com/.default")
+    openai.api_key = os.getenv('API_KEY')
     print("end:get_token()\n")
     try:
         response = openai.ChatCompletion.create(
