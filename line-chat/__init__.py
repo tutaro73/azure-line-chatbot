@@ -1,5 +1,6 @@
 import logging
 import os
+import base64
 from datetime import datetime, timedelta
 
 from linebot.exceptions import InvalidSignatureError
@@ -233,6 +234,26 @@ def reply_message(message_text, user_id, message_id, reply_token):
         TextSendMessage(text=reply_message)
     )
 
+def handle_image_message(image_data, user_id, message_id, reply_token):
+    """
+    Process the received image and create a response.
+    """
+    
+    try:
+        # 画像データを処理して説明を取得
+        image_description = chat_with_gpt4_vision(image_data)
+        put_table(user_id, message_id, "[Image data]", image_description)
+        reply_vision_message = f'{image_description}'
+        
+    except Exception as e:
+        logging.error(f"Error while processing image: {e}")
+        return "申し訳ありませんが、画像を分析できませんでした。"
+    
+    line_bot_api.reply_message(
+        reply_token,
+        TextSendMessage(text=reply_vision_message)
+    )
+
 
 @handler.add(MessageEvent, message=StickerMessage)
 def message_sticker(event):
@@ -286,23 +307,6 @@ def handle_image(event):
     # 画像データをBase64エンコードする
     encoded_image = base64.b64encode(image_data).decode("utf-8")
 
-    # OpenAIのAPIを使って画像の説明をリクエストする
-    response = openai.ChatCompletion.create(
-        model="gpt-4-vision-preview",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "この画像を説明してください。"},
-                    {
-                        "type": "image",
-                        "data": encoded_image  # 画像データをBase64エンコードしたものを使用
-                    },
-                ],
-            }
-        ],
-        max_tokens=300
-    )
-
-    return response  # OpenAIからのレスポンスを返す
+    handle_image_message(image_data=encoded_image, user_id=user_id,
+                  message_id=message_id, reply_token=reply_token)
 
