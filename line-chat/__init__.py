@@ -1,18 +1,19 @@
 import logging
 import os
 import base64
+import openai
+import requests
+
 from datetime import datetime, timedelta
 
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, StickerMessage, TextSendMessage
+from linebot.models import MessageEvent, TextMessage, StickerMessage, TextSendMessage, ImageMessage
 from linebot import LineBotApi, WebhookHandler
 
 from azure.identity import DefaultAzureCredential
 from azure.data.tables import TableServiceClient
 import azure.functions as func
 from azure.keyvault.secrets import SecretClient
-
-import openai
 
 class TokenManager:
     def __init__(self):
@@ -37,7 +38,7 @@ openai_model = "gpt-4-1106-preview"
 openai_vision_model = "gpt-4-vision-preview"
 
 system_prompt = os.getenv('OPENAI_API_SYSTEM_PROMPT',
-                          u'あなたの名前は「らいざっぴ」です。食事のカロリー計算をしてダイエットの手助けをします。必ず日本語で返答してください。親しみやすい口調で話し、語尾に「ッピ」をつけてください。')
+                          u'あなたの名前は「らいざっぴ」です。食事のカロリー計算をしてダイエットの手助けをします。必ず日本語で簡潔に返答してください。親しみやすい口調で話し、語尾に「ッピ」をつけてください。')
 unknown_sticker_message = os.getenv(
     'UNKNOWN_STICKER_MESSAGE', u'そのスタンプはよくわからないッピ。ごめんッピ。')
 
@@ -122,54 +123,61 @@ def chat_with_gpt4(messages):
     """
     Calling process of OpenAI API
     """
-    print("start:get_token()\n")
+    logging.info("start:get_token()\n")
     openai.api_key = os.getenv('API_KEY')
-    print("end:get_token()\n")
+    logging.info("APIKEY")#debug
+    logging.info(openai.api_key)#debug
+    logging.info("messages")#debug
+    logging.info(messages)#debug
+    logging.info("end:get_token()\n")
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model=openai_model,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800,
-            top_p=0.95,
-            frequency_penalty=0,
-            presence_penalty=0,
-            stop=None)
-        return response.choices[0]["message"]["content"].strip()
-
-    except (openai.error.AuthenticationError, openai.error.InvalidRequestError) as e:
-        logging.error(f"OpenAI API error: {e}")
-        return None
+           messages=messages
+           )
+        #responsev = "テストメッセージ"
+        logging.info(response)#debug
+        logging.info(type(response))#debug
+        #return responsev
+        return response.choices[0].message.content
 
     except IndexError:
-        logging.error("No response returned from GPT-3.")
+        logging.error("No response returned from GPT-4-turbo.")
         return None
 
 def chat_with_gpt4_vision(messages):
     """
     Calling process of OpenAI vision API
     """
-    print("start:get_token()\n")
+    logging.info("start:get_token()\n")
     openai.api_key = os.getenv('API_KEY')
-    print("end:get_token()\n")
+    logging.info("messages")#debug
+    logging.info(messages)#debug
+    logging.info("end:get_token()\n")
+    
     try:
-        response = openai.ChatCompletion.create(
-            model=openai_vision_model,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800,
-            top_p=0.95,
-            frequency_penalty=0,
-            presence_penalty=0,
-            stop=None)
-        return response.choices[0]["message"]["content"].strip()
+        response = openai.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "あなたの名前は「らいざっぴ」です。食事のカロリー計算をしてダイエットの手助けをします。必ず日本語で簡潔に返答してください。親しみやすい口調で話し、語尾に「ッピ」をつけてください。画像を説明してください。また、食べ物の場合は、カロリー計算もして簡潔に提示してください。"},
+                {
+                    "type": "image_url",
+                    "image_url":  {"url": f"data:image/jpeg;base64,{messages}"},
+                },
+            ],
+        }
+    ],
+    max_tokens=300,
+    )
+        logging.info(response)
+        return response.choices[0].message.content
 
-    except (openai.error.AuthenticationError, openai.error.InvalidRequestError) as e:
-        logging.error(f"OpenAI API error: {e}")
-        return None
 
     except IndexError:
-        logging.error("No response returned from GPT-3.")
+        logging.error("No response returned from GPT-4-vision.")
         return None
 
 
@@ -219,15 +227,18 @@ def reply_message(message_text, user_id, message_id, reply_token):
             "content": message_text
         }
     )
+    
+    logging.info(msg)#debug
 
     try:
         res_message = chat_with_gpt4(msg)
         reply_message = f'{res_message}'
+        logging.info(reply_message) #debug
         put_table(user_id, message_id, message_text, reply_message)
 
     except Exception as e:
         logging.error(f"Error while calling chat_with_gpt4: {e}")
-        reply_message = "Sorry, I couldn't process your message."
+        reply_message = "すみません、メッセージを処理できませんでした"
 
     line_bot_api.reply_message(
         reply_token,
@@ -242,6 +253,7 @@ def handle_image_message(image_data, user_id, message_id, reply_token):
     try:
         # 画像データを処理して説明を取得
         image_description = chat_with_gpt4_vision(image_data)
+        logging.info("ハンドル関数に戻ってきた")#debug
         put_table(user_id, message_id, "[Image data]", image_description)
         reply_vision_message = f'{image_description}'
         
@@ -290,6 +302,8 @@ def message_text(event):
     message_text = event.message.text
     reply_token = event.reply_token
 
+    logging.info(message_text) #debug
+
     reply_message(message_text=message_text, user_id=user_id,
                   message_id=message_id, reply_token=reply_token)
 
@@ -298,14 +312,22 @@ def handle_image(event):
     profile = line_bot_api.get_profile(event.source.user_id)
     user_id = profile.user_id
     message_id = event.message.id
-    message_text = event.message.text
     reply_token = event.reply_token
+
+    logging.info("image_file") #debug
 
     # message_idから画像のバイナリデータを取得
     image_data = line_bot_api.get_message_content(message_id)
+    
+    logging.info("image_dataのデータ型")
+    logging.info(type(image_data))
+
 
     # 画像データをBase64エンコードする
-    encoded_image = base64.b64encode(image_data).decode("utf-8")
+    encoded_image = base64.b64encode(image_data.content).decode("utf-8")
+    
+    logging.info("encoded_imageのデータ型")
+    logging.info(type(encoded_image))
 
     handle_image_message(image_data=encoded_image, user_id=user_id,
                   message_id=message_id, reply_token=reply_token)
